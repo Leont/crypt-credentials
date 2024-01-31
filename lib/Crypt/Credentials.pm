@@ -150,9 +150,9 @@ This module implements a credentials store. Essentially it allows you to expand 
 
 =method new
 
- $self->new(key => $key, dir => $dir)
+ $self->new(keys => \@keys, dir => $dir)
 
-This creates a new C<Crypt::Credentials> object. It takes two named arguments: C<$key> (mandatory) is the cryptographic key used to encrypt the credentials, it must be either 16, 24, or 32 bytes long. C<$dir> is optional for the directory in which the credentials are stored, it defaults to F<./credentials>.
+This creates a new C<Crypt::Credentials> object. It takes two named arguments: C<@keys> (mandatory) are the cryptographic keys used to encrypt the credentials, they must be either 16, 24, or 32 bytes long. If multiple keys are given they're tried until the right one is found, this facilitates key rotation. C<$dir> is optional for the directory in which the credentials are stored, it defaults to F<./credentials>.
 
 =method get
 
