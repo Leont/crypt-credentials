@@ -1,6 +1,8 @@
 Revision history for Crypt-Credentials
 
 {{$NEXT}}
+
+0.002     2024-01-31 02:56:49+01:00 Europe/Brussels
           - Allow for multiple keys
 
 0.001     2024-01-31 02:30:02+01:00 Europe/Brussels
