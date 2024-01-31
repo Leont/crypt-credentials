@@ -1,6 +1,7 @@
 Revision history for Crypt-Credentials
 
 {{$NEXT}}
+          - Allow for multiple keys
 
 0.001     2024-01-31 02:30:02+01:00 Europe/Brussels
           Initial release to an unsuspecting world

@@ -12,8 +12,8 @@ use File::Temp 'tempdir';
 my $dir = tempdir(CLEANUP => 1);
 
 my $credentials = Crypt::Credentials->new(
-	key => '0123456789ABCDEF',
-	dir => $dir,
+	keys => [ '0123456789ABCDEF' ],
+	dir  => $dir,
 );
 
 is_deeply [$credentials->list], [], 'No entries yet';
@@ -37,5 +37,13 @@ $credentials->recode('FEDCBA9876543210');
 my $raw_after = read_binary($file);
 
 isnt($raw_after, $raw_before, 'File changed on recode');
+
+my $credentials2 = Crypt::Credentials->new(
+	keys => [ '0123456789ABCDEF', 'FEDCBA9876543210' ],
+	dir  => $dir,
+);
+
+my $back2 = eval { $credentials2->get_yaml('first') };
+is_deeply($back2, $original, 'Values roundtrip again');
 
 done_testing;

@@ -13,14 +13,32 @@ use YAML::PP;
 
 sub new {
 	my ($class, %args) = @_;
-	my $key_length = length $args{key};
-	croak "Invalid key size($key_length)" if $key_length != 16 && $key_length != 24 && $key_length != 32;
 
 	my $dir = rel2abs($args{dir} // catdir(curdir, 'credentials'));
 	make_path($dir);
 
+	my $check_file = catfile($dir, 'check.enc');
+
+	my $real_key;
+
+	if (-e $check_file) {
+		for my $key (@{ $args{keys} }) {
+			my $length = length $key;
+			croak "Invalid key size($length)" if $length != 16 && $length != 24 && $length != 32;
+			if (eval { $class->_get($key, $check_file) } // '' eq 'OK') {
+				$real_key = $key;
+				last;
+			}
+		}
+	} else {
+		($real_key) = @{ $args{keys} };
+		my $length = length $real_key;
+		croak "Invalid key size($length)" if $length != 16 && $length != 24 && $length != 32;
+		$class->_put($check_file, $real_key, 'OK');
+	}
+
 	return bless {
-		key => $args{key},
+		key => $real_key,
 		dir => $dir,
 	}, $class;
 }
@@ -93,6 +111,8 @@ sub recode {
 		$self->_put($filename, $new_key, $plaintext);
 	}
 
+	my $check_file = catfile($self->{dir}, 'check.enc');
+	$self->_put($check_file, $new_key, 'OK');
 	$self->{key} = $new_key;
 
 	return;
@@ -119,7 +139,7 @@ sub list {
 
  my $credentials = Crypt::Credentials->new(
    dir => $dir,
-   key => $ENV{CREDENTIAL_KEY},
+   keys => split /:/, $ENV{CREDENTIAL_KEYS},
  );
 
  my $password = $credentials->get('password');
