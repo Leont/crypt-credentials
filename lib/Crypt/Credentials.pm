@@ -25,7 +25,7 @@ sub new {
 		for my $key (@{ $args{keys} }) {
 			my $length = length $key;
 			croak "Invalid key size($length)" if $length != 16 && $length != 24 && $length != 32;
-			if (eval { $class->_get($key, $check_file) } // '' eq 'OK') {
+			if (eval { $class->_get($check_file, $key) } // '' eq 'OK') {
 				$real_key = $key;
 				last;
 			}
@@ -68,7 +68,7 @@ sub put_yaml {
 }
 
 sub _get {
-	my ($self, $key, $filename) = @_;
+	my ($self, $filename, $key) = @_;
 	my $raw = read_binary($filename);
 	my ($iv, $tag, $ciphertext) = unpack $format, $raw;
 	my $plaintext = gcm_decrypt_verify('AES', $key, $iv, '', $ciphertext, $tag);
@@ -80,7 +80,7 @@ sub get {
 	my ($self, $name) = @_;
 	my $filename = catfile($self->{dir}, "$name.yml.enc");
 	croak "No such credentials '$name'" if not -e $filename;
-	return $self->_get($self->{key}, $filename);
+	return $self->_get($filename, $self->{key});
 }
 
 sub get_yaml {
@@ -107,7 +107,7 @@ sub recode {
 		next unless $file =~ /\.yml\.enc$/;
 		my $filename = catfile($self->{dir}, $file);
 
-		my $plaintext = $self->_get($self->{key}, $filename);
+		my $plaintext = $self->_get($filename, $self->{key});
 		$self->_put($filename, $new_key, $plaintext);
 	}
 
