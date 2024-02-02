@@ -6,22 +6,22 @@ use warnings;
 use Carp 'croak';
 use Crypt::AuthEnc::GCM qw/gcm_encrypt_authenticate gcm_decrypt_verify/;
 use Crypt::URandom 0.37 'urandom_ub';
+use File::Basename 'dirname';
 use File::Path 'make_path';
 use File::Slurper qw/read_binary write_binary/;
-use File::Spec::Functions qw/catdir catfile curdir rel2abs/;
+use File::Spec::Functions qw/catdir catfile curdir updir abs2rel rel2abs/;
 use YAML::PP;
 
 sub new {
 	my ($class, %args) = @_;
 
 	my $dir = rel2abs($args{dir} // catdir(curdir, 'credentials'));
-	make_path($dir);
 
 	my $check_file = catfile($dir, 'check.enc');
 
 	my $real_key;
 
-	if (-e $check_file) {
+	if (-f $check_file) {
 		for my $key (@{ $args{keys} }) {
 			my $length = length $key;
 			croak "Invalid key size($length)" if $length != 16 && $length != 24 && $length != 32;
@@ -34,6 +34,7 @@ sub new {
 		($real_key) = @{ $args{keys} };
 		my $length = length $real_key;
 		croak "Invalid key size($length)" if $length != 16 && $length != 24 && $length != 32;
+		make_path($dir);
 		$class->_put($check_file, $real_key, 'OK');
 	}
 	croak 'No working key found' unless defined $real_key;
@@ -58,6 +59,8 @@ sub _put {
 sub put {
 	my ($self, $name, $plaintext) = @_;
 	my $filename = catfile($self->{dir}, "$name.yml.enc");
+	my $dirname = dirname($filename);
+	make_path($dirname);
 	$self->_put($filename, $self->{key}, $plaintext);
 	return;
 }
@@ -80,7 +83,7 @@ sub _get {
 sub get {
 	my ($self, $name) = @_;
 	my $filename = catfile($self->{dir}, "$name.yml.enc");
-	croak "No such credentials '$name'" if not -e $filename;
+	croak "No such credentials '$name'" if not -f $filename;
 	return $self->_get($filename, $self->{key});
 }
 
@@ -93,8 +96,25 @@ sub get_yaml {
 sub has {
 	my ($self, $name) = @_;
 
-	my $filename = catfile($self->{dir}, "$name.yml.enc");
-	return -e $filename;
+	return -f catfile($self->{dir}, "$name.yml.enc");
+}
+
+sub _recode_dir {
+	my ($self, $dir, $new_key) = @_;
+
+	opendir my $dh, $dir or croak "Could not open dir: $!";
+	while (my $file = readdir $dh) {
+		next if $file eq curdir || $file eq updir;
+		my $filename = catfile($dir, $file);
+
+		if (-d $filename) {
+			$self->_recode_dir($filename, $new_key);
+		} elsif (-f $filename) {
+			next unless $file =~ /\.yml\.enc$/;
+			my $plaintext = $self->_get($filename, $self->{key});
+			$self->_put($filename, $new_key, $plaintext);
+		}
+	}
 }
 
 sub recode {
@@ -103,14 +123,7 @@ sub recode {
 	my $key_length = length $new_key;
 	croak "Invalid key size($key_length)" if $key_length != 16 && $key_length != 24 && $key_length != 32;
 
-	opendir my $dh, $self->{dir} or croak "Could not open dir: $!";
-	while (my $file = readdir $dh) {
-		next unless $file =~ /\.yml\.enc$/;
-		my $filename = catfile($self->{dir}, $file);
-
-		my $plaintext = $self->_get($filename, $self->{key});
-		$self->_put($filename, $new_key, $plaintext);
-	}
+	$self->_recode_dir($self->{dir}, $new_key);
 
 	my $check_file = catfile($self->{dir}, 'check.enc');
 	$self->_put($check_file, $new_key, 'OK');
@@ -125,11 +138,29 @@ sub remove {
 	return unlink($filename);
 }
 
+sub _list_dir {
+	my ($self, $base, $dir) = @_;
+	opendir my $dh, $dir or croak "No such dir $dir: $!";
+	my @files;
+	while (my $file = readdir $dh) {
+		next if $file eq curdir || $file eq updir;
+		my $filename = catfile($dir, $file);
+
+		if (-d $filename) {
+			push @files, $self->_list_dir($base, $filename);
+		} elsif (-f $filename and $filename =~ s/\.yml\.enc$//) {
+			push @files, abs2rel($filename, $base);
+		}
+	}
+	return @files;
+}
+
 sub list {
-	my ($self) = @_;
-	opendir my $dh, $self->{dir} or croak "No such dir $self->{dir}";
-	my @files = readdir $dh;
-	return grep s/\.yml\.enc$//, @files;
+	my ($self, $base) = @_;
+	my $dir = $base ? catdir($self->{dir}, $base) : $self->{dir};
+	return if not -d $dir;
+
+	return $self->_list_dir($self->{dir}, $dir);
 }
 
 1;
