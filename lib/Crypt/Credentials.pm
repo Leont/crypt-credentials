@@ -36,6 +36,7 @@ sub new {
 		croak "Invalid key size($length)" if $length != 16 && $length != 24 && $length != 32;
 		$class->_put($check_file, $real_key, 'OK');
 	}
+	croak 'No working key found' unless defined $real_key;
 
 	return bless {
 		key => $real_key,

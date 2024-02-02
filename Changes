@@ -1,6 +1,7 @@
 Revision history for Crypt-Credentials
 
 {{$NEXT}}
+          - Croak when no key is valid
 
 0.002     2024-01-31 02:56:49+01:00 Europe/Brussels
           - Allow for multiple keys
