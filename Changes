@@ -1,6 +1,7 @@
 Revision history for Crypt-Credentials
 
 {{$NEXT}}
+          - Use Crypt::SysRandom as source of randomness
 
 0.004     2025-01-20 00:34:34+01:00 Europe/Brussels
           - Use CryptX's built-in randomness source
