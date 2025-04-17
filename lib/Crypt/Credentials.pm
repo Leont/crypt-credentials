@@ -25,7 +25,8 @@ sub new {
 		for my $key (@{ $args{keys} }) {
 			my $length = length $key;
 			croak "Invalid key size($length)" if $length != 16 && $length != 24 && $length != 32;
-			if (eval { $class->_get($check_file, $key) } // '' eq 'OK') {
+			my $tag = eval { $class->_get($check_file, $key) } // '';
+			if ($tag eq 'OK') {
 				$real_key = $key;
 				last;
 			}

@@ -1,6 +1,7 @@
 Revision history for Crypt-Credentials
 
 {{$NEXT}}
+          - Fix precedence issue in key check
 
 0.005     2025-02-04 20:04:30+01:00 Europe/Brussels
           - Use Crypt::SysRandom as source of randomness
